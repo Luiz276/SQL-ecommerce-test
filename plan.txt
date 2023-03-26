@@ -8,3 +8,8 @@ Tabelas: Produtos, Categorias, Pedidos
     -Produtos: nome, descrição, preço
     -Categorias: nome, n_produtos_associados
     -Pedidos: data, cliente, produto_escolhido, quantidade_produto, endereço_entrega, valor_total
+
+Faltando:
+    - Relatório
+    - Diagrama
+    - SQL para gerar a tabela com 50 valores
