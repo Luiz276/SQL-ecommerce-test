@@ -1,0 +1,1 @@
+-- Script responsável por popular as tabelas com dados aleatórios
