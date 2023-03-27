@@ -9,7 +9,7 @@ SELECT nome_produto,
 -- listar todas as categorias com nome e número de produtos associados
 -- em ordem alfabetica crescente
 SELECT nome_categoria,
-    n_produtos
+    (SELECT COUNT(*) FROM Produtos WHERE Categorias.id_categoria = Produtos.id_categoria) as "produtos na categoria"
   FROM Categorias ORDER BY nome_categoria ASC;
 
 -- listar todos os pedidos com data, endereco de entrega e valor total
@@ -33,11 +33,11 @@ SELECT nome_produto,
 -- cliente e ordem crescente da data do pedido;
 SELECT cliente,
     data_pedido,
-    id_produto,
+    nome_produto AS produto,
     quantidade,
     endereco,
     valor_total
-  FROM Pedidos
+  FROM Pedidos INNER JOIN Produtos ON Pedidos.id_produto=Produtos.id_produto
   WHERE data_pedido>='2020-01-01' and data_pedido<='2021-12-31'
   ORDER BY cliente ASC,
     data_pedido ASC;

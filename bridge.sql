@@ -1,8 +1,8 @@
 -- Criando as tabelas ----------
 CREATE TABLE Categorias(
     id_categoria serial PRIMARY KEY,
-    nome_categoria VARCHAR(50) unique not null,
-    n_produtos INTEGER DEFAULT 0
+    nome_categoria VARCHAR(50) unique not null
+    -- n_produtos INTEGER DEFAULT 0
 );
 
 CREATE TABLE Produtos(
@@ -46,6 +46,7 @@ BEGIN
   -- Let's set the Orders.price to the correct value!
   NEW.valor_total = order_price;
 
+  --update quantidade vendida
   id_prod := NEW.id_produto;
   UPDATE Produtos SET quantidade_vendida= quantidade_vendida+NEW.quantidade
   WHERE id_produto=id_prod;
@@ -54,34 +55,60 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
-
--- Update o numero de produtos em cada categoria
-CREATE OR REPLACE FUNCTION categoriaQuantidade()
-RETURNS trigger AS
+CREATE OR REPLACE FUNCTION functionUpdateOrderPrice()
+RETURNS trigger AS 
 $$
 DECLARE
-    id_cat INT;
+  produto_price numeric(10,2);
+  order_price numeric(10,2);
+  id_prod int;
 BEGIN
-    -- descobrir a qual categoria o novo produto pertence
-    id_cat := NEW.id_categoria;
-    -- aumentar o contador na categoria
-    UPDATE Categorias SET n_produtos= n_produtos+1
-    WHERE id_categoria=id_cat;
-    RETURN NEW;
+  -- Getting the particular part's price
+  produto_price := (SELECT preco FROM Produtos WHERE Produtos.id_produto=NEW.id_produto);
+  -- Multiplying the price with the quantity to get order total price
+  order_price := produto_price * NEW.quantidade;
+  -- Let's set the Orders.price to the correct value!
+  NEW.valor_total = order_price;
+
+  --update quantidade vendida
+  id_prod := NEW.id_produto;
+  UPDATE Produtos SET quantidade_vendida= quantidade_vendida-OLD.quantidade+NEW.quantidade
+  WHERE id_produto=id_prod;
+
+  return NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION functionDeleteOrderPrice()
+RETURNS trigger AS 
+$$
+DECLARE
+  id_prod int;
+BEGIN
+  --update quantidade vendida
+  id_prod := OLD.id_produto;
+  UPDATE Produtos SET quantidade_vendida= quantidade_vendida-OLD.quantidade
+  WHERE id_produto=id_prod;
+
+  return NEW;
 END;
 $$ LANGUAGE plpgsql;
 
 -- Trigger para valor total e update em quantidade vendida em produtos
 CREATE TRIGGER insertOrder
-BEFORE INSERT OR UPDATE ON Pedidos
+BEFORE INSERT ON Pedidos
 FOR EACH ROW
 EXECUTE FUNCTION functionSetOrderPrice();
 
--- Trigger para n_produtos em categoria
-CREATE TRIGGER novoProduto
-AFTER INSERT ON Produtos
+CREATE TRIGGER updateOrder
+BEFORE UPDATE ON Pedidos
 FOR EACH ROW
-EXECUTE FUNCTION categoriaQuantidade();
+EXECUTE FUNCTION functionUpdateOrderPrice();
+
+CREATE TRIGGER deleteOrder
+AFTER DELETE ON Pedidos
+FOR EACH ROW
+EXECUTE FUNCTION functionDeleteOrderPrice();
 
 -- Inserindo dados nas tabelas ----------
 
@@ -90,7 +117,8 @@ INSERT INTO
 VALUES
     ('comida'),
     ('casa'),
-    ('banho');
+    ('banho'),
+    ('carro');
 
 INSERT INTO
     Produtos(nome_produto, id_categoria, descricao,preco)
@@ -99,7 +127,7 @@ VALUES
     ('suco', 1, 'Suco de sabores sortidos', 3),
     ('cafe', 1, 'Po de cafe', 5),
     ('sabonete', 3, 'Sabonete para banho', 10),
-    ('cafe', 1, 'Po de cafe', 5),
+    ('cafe', 1, 'Cafe em po', 7),
     ('prato', 2, 'Prato de cerâmica', 25);
 
 INSERT INTO
@@ -112,6 +140,9 @@ VALUES
     ('2021-03-20', 'Joao', 2, 5, 'São Paulo'),
     ('2020-01-01', 'Alberto', 4, 1, 'Rio de Janeiro');
 
+UPDATE pedidos set quantidade=2 where id_pedido=6;
+DELETE FROM pedidos where id_pedido=6;
+
 -- Queries nas tabelas ----------
 
 -- Listar todos os produtos em ordem alfabetica crescente
@@ -123,7 +154,7 @@ SELECT nome_produto,
 -- listar todas as categorias com nome e número de produtos associados
 -- em ordem alfabetica crescente
 SELECT nome_categoria,
-    n_produtos
+    (SELECT COUNT(*) FROM Produtos WHERE Categorias.id_categoria = Produtos.id_categoria) as "produtos na categoria"
   FROM Categorias ORDER BY nome_categoria ASC;
 
 -- listar todos os pedidos com data, endereco de entrega e valor total
@@ -147,11 +178,11 @@ SELECT nome_produto,
 -- cliente e ordem crescente da data do pedido;
 SELECT cliente,
     data_pedido,
-    id_produto,
+    nome_produto AS produto,
     quantidade,
     endereco,
     valor_total
-  FROM Pedidos
+  FROM Pedidos INNER JOIN Produtos ON Pedidos.id_produto=Produtos.id_produto
   WHERE data_pedido>='2020-01-01' and data_pedido<='2021-12-31'
   ORDER BY cliente ASC,
     data_pedido ASC;
@@ -166,3 +197,13 @@ SELECT
     nome_produto
   HAVING COUNT(*) > 1
   ORDER BY Count(*) DESC;
+
+-- APAGAR=-------------------------------------------------
+
+drop trigger insertOrder on pedidos;
+
+drop function functionSetOrderPrice();
+
+drop table pedidos;
+drop table produtos;
+drop table categorias;
