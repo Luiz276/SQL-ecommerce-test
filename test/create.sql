@@ -2,7 +2,6 @@
 CREATE TABLE Categorias(
     id_categoria serial PRIMARY KEY,
     nome_categoria VARCHAR(50) unique not null
-    -- n_produtos INTEGER DEFAULT 0
 );
 
 CREATE TABLE Produtos(
