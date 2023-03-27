@@ -197,13 +197,3 @@ SELECT
     nome_produto
   HAVING COUNT(*) > 1
   ORDER BY Count(*) DESC;
-
--- APAGAR=-------------------------------------------------
-
-drop trigger insertOrder on pedidos;
-
-drop function functionSetOrderPrice();
-
-drop table pedidos;
-drop table produtos;
-drop table categorias;
